@@ -112,7 +112,8 @@ func (T *FacebookProxy) handleGroupMessage(msg *Message) {
 		}
 		T.Cache.upsertEntry(entry)
 	}
-	T.dc.ChannelMessageSend(entry.ChannelID, msg.Body)
+	embed := CreateMessageEmbed(entry.Name, msg.Body)
+	T.dc.ChannelMessageSendEmbed(entry.ChannelID, embed)
 }
 
 func (T *FacebookProxy) handleDirectMessage(msg *Message) {
@@ -132,7 +133,8 @@ func (T *FacebookProxy) handleDirectMessage(msg *Message) {
 		}
 		T.Cache.upsertEntry(entry)
 	}
-	T.dc.ChannelMessageSend(entry.ChannelID, msg.Body)
+	embed := CreateMessageEmbed(entry.Name, msg.Body)
+	T.dc.ChannelMessageSendEmbed(entry.ChannelID, embed)
 }
 
 func (T *FacebookProxy) forwardMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
