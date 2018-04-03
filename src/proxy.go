@@ -27,7 +27,7 @@ func NewFacebookProxy() (*FacebookProxy, error) {
 		return nil, err
 	}
 
-	dg, err := discordgo.New("Bot NDMwMjY5NjYwMTczNDM0ODgy.DaNvvw.jTI0XzWF_scyIvmCDxE9RKy1lkI")
+	dg, err := discordgo.New("Bot " + os.Getenv("BOT_TOKEN"))
 	if err != nil {
 		fmt.Println("error creating Discord session,", err)
 		return nil, err
