@@ -14,7 +14,6 @@ const (
 func (T *FacebookProxy) runFacebookClient() {
 	stream := T.fb.EventStream()
 	go T.handleOutboundMessage()
-	T.fb.SendGroupText("1671044759644261", "does this work?")
 	defer stream.Close()
 	for {
 		select {
