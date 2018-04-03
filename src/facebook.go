@@ -41,7 +41,7 @@ func (T *FacebookProxy) handleOutboundMessage() {
 		select {
 		case msg := <-T.outbox:
 			if msg.Group == "" {
-				T.fb.SendText(msg.ID, msg.Body)
+				T.fb.SendText(msg.FBID, msg.Body)
 			} else {
 				T.fb.SendGroupText(msg.Group, msg.Body)
 			}

@@ -113,18 +113,20 @@ func (T *FacebookProxy) handleGroupMessage(msg *Message) {
 		T.Cache.upsertEntry(entry)
 	}
 	// Get the sender name
-	sender, err := T.Cache.getByFBID(msg.ID)
-	senderName := sender.Name
+	var senderName string
+	sender, err := T.Cache.getByFBID(msg.FBID)
 	if err != nil {
-		friend := T.fetchFriend(fbid)
+		friend := T.fetchFriend(msg.FBID)
 		senderName = friend.Vanity
+	} else {
+		senderName = sender.Name
 	}
 	embed := CreateMessageEmbed(senderName, msg.Body)
 	T.dc.ChannelMessageSendEmbed(entry.ChannelID, embed)
 }
 
 func (T *FacebookProxy) handleDirectMessage(msg *Message) {
-	fbid := msg.ID
+	fbid := msg.FBID
 	entry, err := T.Cache.getByFBID(fbid)
 	if err != nil {
 		// Fetch and cache
@@ -162,7 +164,7 @@ func (T *FacebookProxy) forwardMessage(s *discordgo.Session, m *discordgo.Messag
 		}
 	} else {
 		msg = &Message{
-			ID:   entry.FBID,
+			FBID: entry.FBID,
 			Body: m.Content,
 		}
 	}

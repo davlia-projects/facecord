@@ -1,15 +1,15 @@
 package main
 
 type Message struct {
-	ID    string
+	FBID  string
 	Name  string
 	Body  string
 	Group string
 }
 
-func NewMessage(id, name, body, group string) *Message {
+func NewMessage(fbid, name, body, group string) *Message {
 	m := &Message{
-		ID:    id,
+		FBID:  fbid,
 		Name:  name,
 		Body:  body,
 		Group: group,
