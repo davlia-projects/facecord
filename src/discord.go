@@ -112,7 +112,14 @@ func (T *FacebookProxy) handleGroupMessage(msg *Message) {
 		}
 		T.Cache.upsertEntry(entry)
 	}
-	embed := CreateMessageEmbed(entry.Name, msg.Body)
+	// Get the sender name
+	sender, err := T.Cache.getByFBID(msg.ID)
+	senderName := sender.Name
+	if err != nil {
+		friend := T.fetchFriend(fbid)
+		senderName = friend.Vanity
+	}
+	embed := CreateMessageEmbed(senderName, msg.Body)
 	T.dc.ChannelMessageSendEmbed(entry.ChannelID, embed)
 }
 
