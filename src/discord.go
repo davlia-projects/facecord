@@ -83,7 +83,7 @@ func (T *FacebookProxy) consumeInbox() {
 }
 
 func (T *FacebookProxy) handleInboxMessage(msg *Message) {
-	if msg.Group != "" {
+	if msg.Group == "" {
 		T.handleDirectMessage(msg)
 	} else {
 		T.handleGroupMessage(msg)
@@ -97,8 +97,13 @@ func (T *FacebookProxy) handleGroupMessage(msg *Message) {
 		// Fetch and cache
 		thread := T.fetchThread(fbid)
 		entry = &Entry{
-			Name: thread.Name,
-			FBID: fbid,
+			FBID:    fbid,
+			IsGroup: true,
+		}
+		if thread.Name != "" {
+			entry.Name = thread.Name
+		} else {
+			entry.Name = fbid
 		}
 		entry.ChannelID, err = T.createChannel(entry.Name)
 		if err != nil {
@@ -131,6 +136,7 @@ func (T *FacebookProxy) handleDirectMessage(msg *Message) {
 }
 
 func (T *FacebookProxy) forwardMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
+	var msg *Message
 	if m.Author.ID == s.State.User.ID {
 		return
 	}
@@ -139,9 +145,17 @@ func (T *FacebookProxy) forwardMessage(s *discordgo.Session, m *discordgo.Messag
 		log.Printf("error while forwarding messages: %s\n", err)
 		return
 	}
-	msg := &Message{
-		ID:   entry.FBID,
-		Body: m.Content,
+
+	if entry.IsGroup {
+		msg = &Message{
+			Group: entry.FBID,
+			Body:  m.Content,
+		}
+	} else {
+		msg = &Message{
+			ID:   entry.FBID,
+			Body: m.Content,
+		}
 	}
 
 	T.outbox <- msg

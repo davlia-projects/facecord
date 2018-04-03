@@ -15,6 +15,7 @@ type Entry struct {
 	FBID      string
 	Name      string
 	ChannelID string
+	IsGroup   bool
 }
 
 func NewCache() *Cache {

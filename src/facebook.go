@@ -14,6 +14,7 @@ const (
 func (T *FacebookProxy) runFacebookClient() {
 	stream := T.fb.EventStream()
 	go T.handleOutboundMessage()
+	T.fb.SendGroupText("1671044759644261", "does this work?")
 	defer stream.Close()
 	for {
 		select {
@@ -40,7 +41,11 @@ func (T *FacebookProxy) handleOutboundMessage() {
 	for {
 		select {
 		case msg := <-T.outbox:
-			T.fb.SendText(msg.ID, msg.Body)
+			if msg.Group == "" {
+				T.fb.SendText(msg.ID, msg.Body)
+			} else {
+				T.fb.SendGroupText(msg.Group, msg.Body)
+			}
 		}
 	}
 }
