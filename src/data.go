@@ -17,6 +17,15 @@ type Entry struct {
 	ChannelID string
 }
 
+func NewStore() *Store {
+	s := &Store{
+		FBIDMap:      make(map[string]*Entry),
+		NameMap:      make(map[string]*Entry),
+		ChannelIDMap: make(map[string]*Entry),
+	}
+	return s
+}
+
 func (T *Store) getByFBID(fbid string) (*Entry, error) {
 	if entry, ok := T.FBIDMap[fbid]; ok {
 		return entry, nil

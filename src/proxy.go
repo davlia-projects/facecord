@@ -27,7 +27,7 @@ type FacebookProxy struct {
 func NewFacebookProxy() (*FacebookProxy, error) {
 	fb, err := fbmsgr.Auth(os.Getenv("FB_USERNAME"), os.Getenv("FB_PASSWORD"))
 	if err != nil {
-		log.Printf("error")
+		log.Printf("error authenticating. check your environment variables.")
 		return nil, err
 	}
 
@@ -43,7 +43,7 @@ func NewFacebookProxy() (*FacebookProxy, error) {
 		guildID: MyGuildID,
 		inbox:   make(chan *Message),
 		outbox:  make(chan *Message),
-		store:   &Store{},
+		store:   NewStore(),
 	}
 	return proxy, nil
 }
