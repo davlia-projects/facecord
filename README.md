@@ -1,9 +1,12 @@
-# facecord
+# facecord v0.0.1
+Stable
 
+The bot is configured by environment variables.
 ```
 export FB_USERNAME=<your_fb_username>
 export FB_PASSWORD=<your_fb_password>
 export GUILD_ID=<your_guild_id>
+export BOT_TOKEN=<your_bot_token>
 ```
 
 
