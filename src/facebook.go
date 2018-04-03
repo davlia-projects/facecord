@@ -14,9 +14,6 @@ const (
 func (T *FacebookProxy) runFacebookClient() {
 	stream := T.fb.EventStream()
 	go T.handleOutboundMessage()
-	T.fb.Friends()
-	// log.Printf("%+v\n", friends)
-
 	defer stream.Close()
 	for {
 		select {
@@ -48,6 +45,15 @@ func (T *FacebookProxy) handleOutboundMessage() {
 	}
 }
 
+func (T *FacebookProxy) fetchThread(threadID string) *fbmsgr.ThreadInfo {
+	thread, err := T.fb.Thread(threadID)
+	if err != nil {
+		log.Printf("could not find thread: %+v\n", err)
+		return nil
+	}
+	return thread
+}
+
 func (T *FacebookProxy) fetchThreads() []*fbmsgr.ThreadInfo {
 	threads := []*fbmsgr.ThreadInfo{}
 	idx := 0
@@ -57,4 +63,20 @@ func (T *FacebookProxy) fetchThreads() []*fbmsgr.ThreadInfo {
 	}
 	threads = append(threads, result.Threads...)
 	return threads
+}
+func (T *FacebookProxy) fetchFriend(fbid string) *fbmsgr.FriendInfo {
+	friend, err := T.fb.Friend(fbid)
+	if err != nil {
+		log.Printf("could not find friend: %+v\n", err)
+		return nil
+	}
+	return friend
+}
+
+func (T *FacebookProxy) fetchFriends() map[string]*fbmsgr.FriendInfo {
+	friends, err := T.fb.Friends()
+	if err != nil {
+		panic(err)
+	}
+	return friends
 }

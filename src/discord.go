@@ -14,12 +14,24 @@ func (T *FacebookProxy) runDiscordBot() error {
 		return err
 	}
 	T.purgeChannels() //debug
-	T.updateFBIDs()
+	// T.populateCache()
+	// T.updateFBIDs()
 	// T.syncGuildChannels()
 
 	go T.consumeInbox()
 
 	return nil
+}
+
+func (T *FacebookProxy) populateCache() {
+	friends := T.fetchFriends()
+	for fbid, friend := range friends {
+		entry := &Entry{
+			FBID: fbid,
+			Name: friend.FullName,
+		}
+		T.Cache.upsertEntry(entry)
+	}
 }
 
 func (T *FacebookProxy) purgeChannels() {
@@ -44,7 +56,7 @@ func (T *FacebookProxy) updateFBIDs() {
 		} else {
 			entry.FBID = thread.ThreadFBID
 		}
-		T.store.upsertEntry(entry)
+		T.Cache.upsertEntry(entry)
 	}
 }
 
@@ -71,23 +83,50 @@ func (T *FacebookProxy) consumeInbox() {
 }
 
 func (T *FacebookProxy) handleInboxMessage(msg *Message) {
-	var entry *Entry
-	entry, err := T.store.getByFBID(msg.ID)
-	if err != nil {
-		entry = &Entry{
-			FBID: msg.ID,
-			Name: msg.Name,
-		}
-		T.store.upsertEntry(entry)
+	if msg.Group != "" {
+		T.handleDirectMessage(msg)
+	} else {
+		T.handleGroupMessage(msg)
 	}
-	if entry.ChannelID == "" {
+}
+
+func (T *FacebookProxy) handleGroupMessage(msg *Message) {
+	fbid := msg.Group
+	entry, err := T.Cache.getByFBID(fbid)
+	if err != nil {
+		// Fetch and cache
+		thread := T.fetchThread(fbid)
+		entry = &Entry{
+			Name: thread.Name,
+			FBID: fbid,
+		}
 		entry.ChannelID, err = T.createChannel(entry.Name)
 		if err != nil {
 			log.Printf("error while handling inbox message: %s\n", err)
 			return
 		}
+		T.Cache.upsertEntry(entry)
 	}
+	T.dc.ChannelMessageSend(entry.ChannelID, msg.Body)
+}
 
+func (T *FacebookProxy) handleDirectMessage(msg *Message) {
+	fbid := msg.ID
+	entry, err := T.Cache.getByFBID(fbid)
+	if err != nil {
+		// Fetch and cache
+		friend := T.fetchFriend(fbid)
+		entry = &Entry{
+			Name: friend.Vanity,
+			FBID: fbid,
+		}
+		entry.ChannelID, err = T.createChannel(entry.Name)
+		if err != nil {
+			log.Printf("error while handling inbox message: %s\n", err)
+			return
+		}
+		T.Cache.upsertEntry(entry)
+	}
 	T.dc.ChannelMessageSend(entry.ChannelID, msg.Body)
 }
 
@@ -95,7 +134,7 @@ func (T *FacebookProxy) forwardMessage(s *discordgo.Session, m *discordgo.Messag
 	if m.Author.ID == s.State.User.ID {
 		return
 	}
-	entry, err := T.store.getByFBID(m.ChannelID)
+	entry, err := T.Cache.getByChannelID(m.ChannelID)
 	if err != nil {
 		log.Printf("error while forwarding messages: %s\n", err)
 		return

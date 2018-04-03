@@ -11,18 +11,13 @@ import (
 	"github.com/davlia/fbmsgr"
 )
 
-const (
-	// This is hardcoded for debugging. Get your own Guild ID.
-	MyGuildID = "430270595935109120"
-)
-
 type FacebookProxy struct {
 	dc      *discordgo.Session
 	fb      *fbmsgr.Session
 	guildID string
 	inbox   chan *Message
 	outbox  chan *Message
-	store   *Store
+	Cache   *Cache
 }
 
 func NewFacebookProxy() (*FacebookProxy, error) {
@@ -41,10 +36,10 @@ func NewFacebookProxy() (*FacebookProxy, error) {
 	proxy := &FacebookProxy{
 		dc:      dg,
 		fb:      fb,
-		guildID: MyGuildID,
+		guildID: os.Getenv("GUILD_ID"),
 		inbox:   make(chan *Message),
 		outbox:  make(chan *Message),
-		store:   NewStore(),
+		Cache:   NewCache(),
 	}
 	return proxy, nil
 }
