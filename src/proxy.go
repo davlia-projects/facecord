@@ -12,6 +12,7 @@ import (
 )
 
 const (
+	// This is hardcoded for debugging. Get your own Guild ID.
 	MyGuildID = "430270595935109120"
 )
 
