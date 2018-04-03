@@ -23,14 +23,12 @@ type FacebookProxy struct {
 func NewFacebookProxy() (*FacebookProxy, error) {
 	fb, err := fbmsgr.Auth(os.Getenv("FB_USERNAME"), os.Getenv("FB_PASSWORD"))
 	if err != nil {
-		log.Printf("error authenticating. check your environment variables.")
-		return nil, err
+		panic("error authenticating. check your environment variables.")
 	}
 
 	dg, err := discordgo.New("Bot " + os.Getenv("BOT_TOKEN"))
 	if err != nil {
-		fmt.Println("error creating Discord session,", err)
-		return nil, err
+		panic(fmt.Sprintf("error creating Discord session,", err))
 	}
 
 	proxy := &FacebookProxy{
