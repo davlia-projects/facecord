@@ -14,8 +14,8 @@ const (
 func (T *FacebookProxy) runFacebookClient() {
 	stream := T.fb.EventStream()
 	go T.handleOutboundMessage()
-	friends, _ := T.fb.Friends()
-	log.Printf("%+v\n", friends)
+	T.fb.Friends()
+	// log.Printf("%+v\n", friends)
 
 	defer stream.Close()
 	for {
