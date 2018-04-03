@@ -1,7 +1,6 @@
 # facecord v0.0.1
 Stable
 
-The bot is configured by environment variables.
 ```
 export FB_USERNAME=<your_fb_username>
 export FB_PASSWORD=<your_fb_password>
@@ -11,6 +10,9 @@ export BOT_TOKEN=<your_bot_token>
 
 
 To get your guild id, turn on Developer Mode in `Settings > Appearance > Developer Mode`. Create your server and then right click it to grab the Guild ID.
+
+
+To get a bot token, go to the developer panel for Discord and create a Bot.
 
 
 To run it, just run `make`.
