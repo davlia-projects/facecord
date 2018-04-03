@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/davlia/fbmsgr"
@@ -14,8 +13,9 @@ const (
 
 func (T *FacebookProxy) runFacebookClient() {
 	stream := T.fb.EventStream()
-
 	go T.handleOutboundMessage()
+	friends, _ := T.fb.Friends()
+	log.Printf("%+v\n", friends)
 
 	defer stream.Close()
 	for {
@@ -34,8 +34,8 @@ func (T *FacebookProxy) handleInboundMessage(msg fbmsgr.MessageEvent) {
 	if msg.SenderFBID == T.fb.FBID() {
 		return
 	}
-	fmt.Println("received message:", msg)
-	T.inbox <- NewMessage(msg.SenderFBID, "", msg.Body, msg.GroupThread)
+	log.Printf("received message: %+v\n", msg)
+	T.inbox <- NewMessage(msg.SenderFBID, msg.OtherUser, msg.Body, msg.GroupThread)
 
 }
 

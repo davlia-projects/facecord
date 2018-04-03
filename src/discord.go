@@ -71,13 +71,19 @@ func (T *FacebookProxy) consumeInbox() {
 }
 
 func (T *FacebookProxy) handleInboxMessage(msg *Message) {
+	var entry *Entry
 	entry, err := T.store.getByFBID(msg.ID)
 	if err != nil {
-		return
+		entry = &Entry{
+			FBID: msg.ID,
+			Name: msg.Name,
+		}
+		T.store.upsertEntry(entry)
 	}
 	if entry.ChannelID == "" {
 		entry.ChannelID, err = T.createChannel(entry.Name)
 		if err != nil {
+			log.Printf("error while handling inbox message: %s\n", err)
 			return
 		}
 	}
@@ -91,7 +97,7 @@ func (T *FacebookProxy) forwardMessage(s *discordgo.Session, m *discordgo.Messag
 	}
 	entry, err := T.store.getByFBID(m.ChannelID)
 	if err != nil {
-		log.Printf("error: %s\n", err)
+		log.Printf("error while forwarding messages: %s\n", err)
 		return
 	}
 	msg := &Message{
