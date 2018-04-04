@@ -2,7 +2,7 @@
 You can invite my hosted bot here
 https://discordapp.com/oauth2/authorize?client_id=430269660173434882&permissions=8&scope=bot
 
-Beware that it might destroy your server since production bot and dev bot is identical... you have been warned.
+Beware that it might destroy your guild since production bot and dev bot is identical... you have been warned.
 
 ## Running the bot yourself
 
