@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"strings"
 
 	"github.com/bwmarrin/discordgo"
 
@@ -19,25 +18,34 @@ type ProxySession struct {
 	fb             *fbmsgr.Session
 	dc             *discordgo.Session
 	registry       *Registry
+
+	// this is some hacky shit idek if this is idiomatic go
+	AdminState   AdminState
+	Block        chan interface{}
+	AdminHandler *func(ps *ProxySession, m *discordgo.Message)
 }
 
 func NewProxySession(guildID string, dc *discordgo.Session, registry *Registry) *ProxySession {
 	ps := &ProxySession{
-		guildID:  guildID,
-		fbInbox:  make(chan *Message),
-		fbOutbox: make(chan *Message),
-		dcInbox:  make(chan *discordgo.Message),
-		Cache:    NewCache(),
-		dc:       dc,
-		registry: registry,
+		guildID:    guildID,
+		fbInbox:    make(chan *Message),
+		fbOutbox:   make(chan *Message),
+		dcInbox:    make(chan *discordgo.Message),
+		cache:      NewCache(),
+		dc:         dc,
+		registry:   registry,
+		AdminState: Ready,
+		Block:      make(chan interface{}, 1),
 	}
 	return ps
 }
 
 func (T *ProxySession) Run() {
+	go T.consumeDcInbox()
+
 	T.purgeChannels()
 	T.createAdminChannel()
-	go T.consumeDcInbox()
+	T.authenticate()
 
 }
 
@@ -45,39 +53,18 @@ func (T *ProxySession) registerChannel(channel *discordgo.Channel) {
 	T.registry.Register(channel.ID, &T.dcInbox)
 }
 
-func (T *ProxySession) purgeChannels() {
-	channels, err := T.dc.GuildChannels(T.guildID)
-	if err != nil {
-		log.Printf("error: %s\n", err)
-		return
+func (T *ProxySession) renderEntries(entries []*Entry) {
+	for _, entry := range entries {
+		if entry.ChannelID == "" && entry.Name != "" {
+			channelID, err := T.createChannel(entry.Name)
+			if err != nil {
+				log.Printf("error creating channel: %s\n", err)
+				continue
+			}
+			entry.ChannelID = channelID
+			T.cache.upsertEntry(entry)
+		}
 	}
-	for _, ch := range channels {
-		T.dc.ChannelDelete(ch.ID)
-	}
-}
-
-func (T *ProxySession) createAdminChannel() {
-	channel, err := T.dc.GuildChannelCreate(T.guildID, AdminChannelName, "text")
-	T.registerChannel(channel)
-	if err != nil {
-		log.Printf("could not create admin channel: %s\n", err)
-	}
-	T.adminChannelID = channel.ID
-	T.dc.ChannelMessageSend(T.adminChannelID, LoginText)
-}
-
-func (T *ProxySession) authenticate(username, password string) {
-	fb, err := fbmsgr.Auth(username, password)
-	if err != nil {
-		log.Printf("error authenticating")
-		T.dc.ChannelMessageSend(T.adminChannelID, LoginFailedText)
-		return
-	}
-	T.dc.ChannelMessageSend(T.adminChannelID, LoginSuccessText)
-	T.fb = fb
-	go T.runFacebookClient()
-	go T.consumeFbInbox()
-
 }
 
 func (T *ProxySession) createChannel(name string) (string, error) {
@@ -182,16 +169,9 @@ func (T *ProxySession) consumeDcInbox() {
 
 func (T *ProxySession) handleDiscordMessage(m *discordgo.Message) {
 	if m.ChannelID == T.adminChannelID {
-		T.handleAdminMessage(m)
+		(*T.AdminHandler)(m)
 	} else {
 		T.forwardFbMessage(m)
-	}
-}
-func (T *ProxySession) handleAdminMessage(m *discordgo.Message) {
-	msg := m.Content
-	toks := strings.Split(msg, " ")
-	if toks[0] == "!login" && len(toks) == 3 {
-		T.authenticate(toks[1], toks[2])
 	}
 }
 
