@@ -9,4 +9,7 @@ const (
 // String values
 const (
 	AdminChannelName = "admin"
+	LoginText        = "Type \"!login <username> <password>\""
+	LoginSuccessText = "Login successful!"
+	LoginFailedText  = "Login failed, try again!"
 )

@@ -14,7 +14,7 @@ type ProxySession struct {
 	adminChannelID string
 	fbInbox        chan *Message
 	fbOutbox       chan *Message
-	inbox          chan *discordgo.Message
+	dcInbox        chan *discordgo.Message
 	Cache          *Cache
 	fb             *fbmsgr.Session
 	dc             *discordgo.Session
@@ -26,18 +26,23 @@ func NewProxySession(guildID string, dc *discordgo.Session, registry *Registry) 
 		guildID:  guildID,
 		fbInbox:  make(chan *Message),
 		fbOutbox: make(chan *Message),
-		inbox:    make(chan *discordgo.Message),
+		dcInbox:  make(chan *discordgo.Message),
 		Cache:    NewCache(),
+		dc:       dc,
 		registry: registry,
 	}
 	return ps
 }
 
-func (T *ProxySession) Setup() {
+func (T *ProxySession) Run() {
 	T.purgeChannels()
 	T.createAdminChannel()
-	go T.consumeInbox()
+	go T.consumeDcInbox()
 
+}
+
+func (T *ProxySession) registerChannel(channel *discordgo.Channel) {
+	T.registry.Register(channel.ID, &T.dcInbox)
 }
 
 func (T *ProxySession) purgeChannels() {
@@ -53,22 +58,26 @@ func (T *ProxySession) purgeChannels() {
 
 func (T *ProxySession) createAdminChannel() {
 	channel, err := T.dc.GuildChannelCreate(T.guildID, AdminChannelName, "text")
-	T.registry.Register(channel.ID, &T.inbox)
+	T.registerChannel(channel)
 	if err != nil {
 		log.Printf("could not create admin channel: %s\n", err)
 	}
 	T.adminChannelID = channel.ID
+	T.dc.ChannelMessageSend(T.adminChannelID, LoginText)
 }
 
 func (T *ProxySession) authenticate(username, password string) {
-	T.dc.ChannelMessageSend(T.adminChannelID, "Type in your username")
 	fb, err := fbmsgr.Auth(username, password)
 	if err != nil {
 		log.Printf("error authenticating")
+		T.dc.ChannelMessageSend(T.adminChannelID, LoginFailedText)
 		return
 	}
+	T.dc.ChannelMessageSend(T.adminChannelID, LoginSuccessText)
 	T.fb = fb
+	go T.runFacebookClient()
 	go T.consumeFbInbox()
+
 }
 
 func (T *ProxySession) createChannel(name string) (string, error) {
@@ -77,6 +86,7 @@ func (T *ProxySession) createChannel(name string) (string, error) {
 		log.Printf("error: %s\n", err)
 		return "", nil
 	}
+	T.registerChannel(channel)
 	return channel.ID, nil
 }
 
@@ -161,10 +171,10 @@ func (T *ProxySession) handleDirectMessage(msg *Message) {
  * Handle incoming messages from Discord
  */
 
-func (T *ProxySession) consumeInbox() {
+func (T *ProxySession) consumeDcInbox() {
 	for {
 		select {
-		case msg := <-T.inbox:
+		case msg := <-T.dcInbox:
 			T.handleDiscordMessage(msg)
 		}
 	}
@@ -174,7 +184,7 @@ func (T *ProxySession) handleDiscordMessage(m *discordgo.Message) {
 	if m.ChannelID == T.adminChannelID {
 		T.handleAdminMessage(m)
 	} else {
-		T.forwardMessage(m)
+		T.forwardFbMessage(m)
 	}
 }
 func (T *ProxySession) handleAdminMessage(m *discordgo.Message) {
@@ -185,7 +195,7 @@ func (T *ProxySession) handleAdminMessage(m *discordgo.Message) {
 	}
 }
 
-func (T *ProxySession) forwardMessage(m *discordgo.Message) {
+func (T *ProxySession) forwardFbMessage(m *discordgo.Message) {
 	var msg *Message
 
 	entry, err := T.Cache.getByChannelID(m.ChannelID)

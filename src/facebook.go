@@ -8,7 +8,9 @@ import (
 
 func (T *ProxySession) runFacebookClient() {
 	stream := T.fb.EventStream()
+
 	go T.handleOutboundMessage()
+
 	defer stream.Close()
 	for {
 		select {
@@ -16,7 +18,7 @@ func (T *ProxySession) runFacebookClient() {
 			if msg, ok := evt.(fbmsgr.MessageEvent); ok {
 				T.handleInboundMessage(msg)
 			} else {
-				log.Printf("unhandled event\n")
+				log.Printf("unhandled event %+v\n", evt)
 			}
 		}
 	}
@@ -63,6 +65,7 @@ func (T *ProxySession) fetchThreads() []*fbmsgr.ThreadInfo {
 	threads = append(threads, result.Threads...)
 	return threads
 }
+
 func (T *ProxySession) fetchFriend(fbid string) *fbmsgr.FriendInfo {
 	friend, err := T.fb.Friend(fbid)
 	if err != nil {
