@@ -2,8 +2,7 @@ package main
 
 // Numeric values
 const (
-	BatchSize  = 32
-	NumThreads = 20
+	NumThreads = 32
 )
 
 // String values

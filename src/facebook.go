@@ -55,12 +55,11 @@ func (T *ProxySession) fetchThread(threadID string) *fbmsgr.ThreadInfo {
 	return thread
 }
 
-func (T *ProxySession) fetchThreads() []*fbmsgr.ThreadInfo {
+func (T *ProxySession) fetchThreads(numThreads int) []*fbmsgr.ThreadInfo {
 	threads := []*fbmsgr.ThreadInfo{}
-	idx := 0
-	result, err := T.fb.Threads(idx, BatchSize)
+	result, err := T.fb.Threads(numThreads)
 	if err != nil {
-		panic(err)
+		log.Printf("%+v\n", err)
 	}
 	threads = append(threads, result.Threads...)
 	return threads
@@ -78,7 +77,7 @@ func (T *ProxySession) fetchFriend(fbid string) *fbmsgr.FriendInfo {
 func (T *ProxySession) fetchFriends() map[string]*fbmsgr.FriendInfo {
 	friends, err := T.fb.Friends()
 	if err != nil {
-		panic(err)
+		log.Printf("%+v\n", err)
 	}
 	return friends
 }
