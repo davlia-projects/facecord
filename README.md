@@ -1,16 +1,12 @@
 # facecord v0.1.0
-Stable
+You can invite my hosted bot here
+https://discordapp.com/oauth2/authorize?client_id=430269660173434882&permissions=8&scope=bot
+
+Beware that it might destroy your server since production bot and dev bot is identical... you have been warned.
 
 ```
-export FB_USERNAME=<your_fb_username>
-export FB_PASSWORD=<your_fb_password>
-export GUILD_ID=<your_guild_id>
 export BOT_TOKEN=<your_bot_token>
 ```
-
-
-To get your guild id, turn on Developer Mode in `Settings > Appearance > Developer Mode`. Create your server and then right click it to grab the Guild ID.
-
 
 To get a bot token, go to the developer panel for Discord and create a Bot.
 
