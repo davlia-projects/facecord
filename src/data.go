@@ -4,7 +4,7 @@ import (
 	"errors"
 )
 
-// too lazy to set up mongo lol
+// should i set up redis :thinking:
 type Cache struct {
 	FBIDMap      map[string]*Entry
 	NameMap      map[string]*Entry
