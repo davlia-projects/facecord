@@ -15,7 +15,7 @@ type ProxySession struct {
 	fbInbox        chan *Message
 	fbOutbox       chan *Message
 	dcInbox        chan *discordgo.Message
-	Cache          *Cache
+	cache          *Cache
 	fb             *fbmsgr.Session
 	dc             *discordgo.Session
 	registry       *Registry
@@ -27,7 +27,7 @@ func NewProxySession(guildID string, dc *discordgo.Session, registry *Registry) 
 		fbInbox:  make(chan *Message),
 		fbOutbox: make(chan *Message),
 		dcInbox:  make(chan *discordgo.Message),
-		Cache:    NewCache(),
+		cache:    NewCache(),
 		dc:       dc,
 		registry: registry,
 	}
@@ -75,16 +75,32 @@ func (T *ProxySession) authenticate(username, password string) {
 	}
 	T.dc.ChannelMessageSend(T.adminChannelID, LoginSuccessText)
 	T.fb = fb
+	T.updateFriends()
+	entries := T.updateThreads(NumThreads)
+	T.renderEntries(entries)
 	go T.runFacebookClient()
 	go T.consumeFbInbox()
 
 }
 
+func (T *ProxySession) renderEntries(entries []*Entry) {
+	for _, entry := range entries {
+		if entry.ChannelID == "" && entry.Name != "" {
+			channelID, err := T.createChannel(entry.Name)
+			if err != nil {
+				log.Printf("error creating channel: %s\n", err)
+				continue
+			}
+			entry.ChannelID = channelID
+			T.cache.upsertEntry(entry)
+		}
+	}
+}
+
 func (T *ProxySession) createChannel(name string) (string, error) {
 	channel, err := T.dc.GuildChannelCreate(T.guildID, name, "text")
 	if err != nil {
-		log.Printf("error: %s\n", err)
-		return "", nil
+		return "", err
 	}
 	T.registerChannel(channel)
 	return channel.ID, nil
@@ -113,7 +129,7 @@ func (T *ProxySession) handleInboxMessage(msg *Message) {
 
 func (T *ProxySession) handleGroupMessage(msg *Message) {
 	fbid := msg.Group
-	entry, err := T.Cache.getByFBID(fbid)
+	entry, err := T.cache.getByFBID(fbid)
 	if err != nil {
 		// Fetch and cache
 		thread := T.fetchThread(fbid)
@@ -131,14 +147,14 @@ func (T *ProxySession) handleGroupMessage(msg *Message) {
 			log.Printf("error while handling fbInbox message: %s\n", err)
 			return
 		}
-		T.Cache.upsertEntry(entry)
+		T.cache.upsertEntry(entry)
 	}
 	// Get the sender name
 	var senderName string
-	sender, err := T.Cache.getByFBID(msg.FBID)
+	sender, err := T.cache.getByFBID(msg.FBID)
 	if err != nil {
 		friend := T.fetchFriend(msg.FBID)
-		senderName = friend.Vanity
+		senderName = friend.AlternateName
 	} else {
 		senderName = sender.Name
 	}
@@ -148,7 +164,7 @@ func (T *ProxySession) handleGroupMessage(msg *Message) {
 
 func (T *ProxySession) handleDirectMessage(msg *Message) {
 	fbid := msg.FBID
-	entry, err := T.Cache.getByFBID(fbid)
+	entry, err := T.cache.getByFBID(fbid)
 	if err != nil {
 		// Fetch and cache
 		friend := T.fetchFriend(fbid)
@@ -161,7 +177,7 @@ func (T *ProxySession) handleDirectMessage(msg *Message) {
 			log.Printf("error while handling fbInbox message: %s\n", err)
 			return
 		}
-		T.Cache.upsertEntry(entry)
+		T.cache.upsertEntry(entry)
 	}
 	embed := CreateMessageEmbed(entry.Name, msg.Body)
 	T.dc.ChannelMessageSendEmbed(entry.ChannelID, embed)
@@ -198,9 +214,9 @@ func (T *ProxySession) handleAdminMessage(m *discordgo.Message) {
 func (T *ProxySession) forwardFbMessage(m *discordgo.Message) {
 	var msg *Message
 
-	entry, err := T.Cache.getByChannelID(m.ChannelID)
+	entry, err := T.cache.getByChannelID(m.ChannelID)
 	if err != nil {
-		log.Printf("error while forwarding messages: %s\n", err)
+		log.Printf("error while forwarding messages: %s. entry: %s\n", err, entry)
 		return
 	}
 
