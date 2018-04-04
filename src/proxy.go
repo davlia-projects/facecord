@@ -8,43 +8,32 @@ import (
 	"syscall"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/davlia/fbmsgr"
 )
 
-type FacebookProxy struct {
-	dc      *discordgo.Session
-	fb      *fbmsgr.Session
-	guildID string
-	inbox   chan *Message
-	outbox  chan *Message
-	Cache   *Cache
+type ProxyBot struct {
+	dc       *discordgo.Session
+	inbox    chan *Message
+	outbox   chan *Message
+	registry *Registry
 }
 
-func NewFacebookProxy() (*FacebookProxy, error) {
-	fb, err := fbmsgr.Auth(os.Getenv("FB_USERNAME"), os.Getenv("FB_PASSWORD"))
-	if err != nil {
-		panic("error authenticating. check your environment variables.")
-	}
-
+func NewProxyBot() (*ProxyBot, error) {
 	dg, err := discordgo.New("Bot " + os.Getenv("BOT_TOKEN"))
 	if err != nil {
 		panic(fmt.Sprintf("error creating Discord session,", err))
 	}
 
-	proxy := &FacebookProxy{
-		dc:      dg,
-		fb:      fb,
-		guildID: os.Getenv("GUILD_ID"),
-		inbox:   make(chan *Message),
-		outbox:  make(chan *Message),
-		Cache:   NewCache(),
+	proxy := &ProxyBot{
+		dc:       dg,
+		inbox:    make(chan *Message),
+		outbox:   make(chan *Message),
+		registry: NewRegistry(),
 	}
 	return proxy, nil
 }
 
-func (T *FacebookProxy) Run() error {
+func (T *ProxyBot) Run() error {
 	go T.runDiscordBot()
-	go T.runFacebookClient()
 
 	// Wait here until CTRL-C or other term signal is received.
 	fmt.Println("Bot is now running.  Press CTRL-C to exit.")
@@ -54,16 +43,10 @@ func (T *FacebookProxy) Run() error {
 	return nil
 }
 
-func (T *FacebookProxy) Stop() error {
+func (T *ProxyBot) Stop() error {
 	err := T.dc.Close()
 	if err != nil {
 		log.Printf("could not close discord session")
-		return err
-	}
-
-	err = T.fb.Close()
-	if err != nil {
-		log.Printf("could not close facebook session")
 		return err
 	}
 
