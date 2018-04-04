@@ -16,3 +16,7 @@ To get a bot token, go to the developer panel for Discord and create a Bot.
 
 
 To run it, just run `make`.
+
+## Currently in development
+ - A giant refactor that allows the bot to be invited to multiple guilds
+ - Admin channel that allows you to authenticate yourself
