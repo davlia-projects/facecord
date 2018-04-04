@@ -1,8 +1,6 @@
 package main
 
 import (
-	"strings"
-
 	"github.com/bwmarrin/discordgo"
 	"github.com/facecord/src/logger"
 
@@ -19,25 +17,34 @@ type ProxySession struct {
 	fb             *fbmsgr.Session
 	dc             *discordgo.Session
 	registry       *Registry
+
+	// this is some hacky shit idek if this is idiomatic go
+	AdminState   AdminState
+	Block        chan interface{}
+	AdminHandler *func(ps *ProxySession, m *discordgo.Message)
 }
 
 func NewProxySession(guildID string, dc *discordgo.Session, registry *Registry) *ProxySession {
 	ps := &ProxySession{
-		guildID:  guildID,
-		fbInbox:  make(chan *Message),
-		fbOutbox: make(chan *Message),
-		dcInbox:  make(chan *discordgo.Message),
-		cache:    NewCache(),
-		dc:       dc,
-		registry: registry,
+		guildID:    guildID,
+		fbInbox:    make(chan *Message),
+		fbOutbox:   make(chan *Message),
+		dcInbox:    make(chan *discordgo.Message),
+		cache:      NewCache(),
+		dc:         dc,
+		registry:   registry,
+		AdminState: Ready,
+		Block:      make(chan interface{}, 1),
 	}
 	return ps
 }
 
 func (T *ProxySession) Run() {
+	go T.consumeDcInbox()
+
 	T.purgeChannels()
 	T.createAdminChannel()
-	go T.consumeDcInbox()
+	T.authenticate()
 
 }
 
@@ -198,16 +205,9 @@ func (T *ProxySession) consumeDcInbox() {
 
 func (T *ProxySession) handleDiscordMessage(m *discordgo.Message) {
 	if m.ChannelID == T.adminChannelID {
-		T.handleAdminMessage(m)
+		(*T.AdminHandler)(m)
 	} else {
 		T.forwardFbMessage(m)
-	}
-}
-func (T *ProxySession) handleAdminMessage(m *discordgo.Message) {
-	msg := m.Content
-	toks := strings.Split(msg, " ")
-	if toks[0] == "!login" && len(toks) == 3 {
-		T.authenticate(toks[1], toks[2])
 	}
 }
 
