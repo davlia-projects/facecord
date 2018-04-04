@@ -3,7 +3,7 @@ package main
 import "log"
 
 func main() {
-	proxy, err := NewFacebookProxy()
+	proxy, err := NewProxyBot()
 	if err != nil {
 		log.Printf("could not start proxy")
 	}

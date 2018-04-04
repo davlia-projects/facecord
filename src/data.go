@@ -57,3 +57,29 @@ func (T *Cache) upsertEntry(entry *Entry) {
 func (T *Cache) deleteEntry(entry *Entry) {
 	// TODO: implement
 }
+
+func (T *ProxySession) updateFBIDs() {
+	threads := T.fetchThreads()
+	for _, thread := range threads {
+		entry := &Entry{
+			Name: thread.Name,
+		}
+		if thread.OtherUserFBID != nil && *thread.OtherUserFBID != "" {
+			entry.FBID = *thread.OtherUserFBID
+		} else {
+			entry.FBID = thread.ThreadFBID
+		}
+		T.Cache.upsertEntry(entry)
+	}
+}
+
+func (T *ProxySession) populateCache() {
+	friends := T.fetchFriends()
+	for fbid, friend := range friends {
+		entry := &Entry{
+			FBID: fbid,
+			Name: friend.FullName,
+		}
+		T.Cache.upsertEntry(entry)
+	}
+}
