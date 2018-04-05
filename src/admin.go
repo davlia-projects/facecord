@@ -8,15 +8,31 @@ import (
 	"github.com/davlia/fbmsgr"
 )
 
+var (
+	r = ready
+)
+
 func (T *ProxySession) unblock(unblock interface{}) {
 	select {
-	case T.Block <- unblock:
+	case T.block <- unblock:
+		log.Printf("unblocking with: %s\n", unblock)
 	default:
+		log.Printf("tossing away unblock %s\n", unblock)
 	}
 }
 
-func (T *ProxySession) block() interface{} {
-	return <-T.Block
+func (T *ProxySession) expect() {
+	log.Printf("blocking with expect\n")
+	debug := <-T.block
+	log.Printf("got what i expected: %s\n", debug)
+	// T.results <- debug
+	log.Printf("unblocking expectInput and proceeding with next step\n")
+}
+
+func ready(ps *ProxySession, m *discordgo.Message) {
+	if m.Author.ID == ps.dc.State.User.ID {
+		return
+	}
 }
 
 func (T *ProxySession) purgeChannels() {
@@ -55,12 +71,14 @@ func (T *ProxySession) prompt(text string) *ProxySession {
 
 func (T *ProxySession) expectInput(handler func(ps *ProxySession, m *discordgo.Message)) *ProxySession {
 	T.AdminHandler = &handler
+	T.expect()
+	T.AdminHandler = &r
 	return T
 }
 
 func (T *ProxySession) login() {
 	var err error
-	T.fb, err = fbmsgr.Auth(T.block().(string), T.block().(string))
+	T.fb, err = fbmsgr.Auth((<-T.results).(string), (<-T.results).(string))
 	if err != nil {
 		log.Printf("error authenticating")
 		T.dc.ChannelMessageSend(T.adminChannelID, LoginFailedText)
@@ -75,6 +93,9 @@ func (T *ProxySession) login() {
 }
 
 func username(ps *ProxySession, m *discordgo.Message) {
+	if m.Author.ID == ps.dc.State.User.ID {
+		return
+	}
 	msg := m.Content
 	toks := strings.Split(msg, " ")
 	if len(toks) == 1 {
@@ -83,6 +104,9 @@ func username(ps *ProxySession, m *discordgo.Message) {
 }
 
 func password(ps *ProxySession, m *discordgo.Message) {
+	if m.Author.ID == ps.dc.State.User.ID {
+		return
+	}
 	msg := m.Content
 	toks := strings.Split(msg, " ")
 	if len(toks) == 1 {

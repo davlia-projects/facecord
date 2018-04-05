@@ -19,8 +19,9 @@ func (T *ProxyBot) runDiscordBot() error {
 }
 
 func (T *ProxyBot) guildCreate(s *discordgo.Session, e *discordgo.GuildCreate) {
+	log.Printf("Creating new session\n")
 	session := NewProxySession(e.Guild.ID, s, T.registry)
-	session.Run()
+	go session.Run()
 }
 
 func (T *ProxyBot) routeMessages(s *discordgo.Session, m *discordgo.MessageCreate) {
