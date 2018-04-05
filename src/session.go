@@ -67,20 +67,6 @@ func (T *ProxySession) renderEntries(entries []*Entry) {
 	}
 }
 
-func (T *ProxySession) renderEntries(entries []*Entry) {
-	for _, entry := range entries {
-		if entry.ChannelID == "" && entry.Name != "" {
-			channelID, err := T.createChannel(entry.Name)
-			if err != nil {
-				log.Printf("error creating channel: %s\n", err)
-				continue
-			}
-			entry.ChannelID = channelID
-			T.cache.upsertEntry(entry)
-		}
-	}
-}
-
 func (T *ProxySession) createChannel(name string) (string, error) {
 	channel, err := T.dc.GuildChannelCreate(T.guildID, name, "text")
 	if err != nil {
@@ -182,7 +168,7 @@ func (T *ProxySession) consumeDcInbox() {
 
 func (T *ProxySession) handleDiscordMessage(m *discordgo.Message) {
 	if m.ChannelID == T.adminChannelID {
-		(*T.AdminHandler)(m)
+		(*T.AdminHandler)(T, m)
 	} else {
 		T.forwardFbMessage(m)
 	}
