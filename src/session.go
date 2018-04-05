@@ -21,21 +21,25 @@ type ProxySession struct {
 
 	// this is some hacky shit idek if this is idiomatic go
 	AdminState   AdminState
-	Block        chan interface{}
+	block        chan interface{}
+	results      chan interface{}
 	AdminHandler *func(ps *ProxySession, m *discordgo.Message)
 }
 
 func NewProxySession(guildID string, dc *discordgo.Session, registry *Registry) *ProxySession {
+	r := ready
 	ps := &ProxySession{
-		guildID:    guildID,
-		fbInbox:    make(chan *Message),
-		fbOutbox:   make(chan *Message),
-		dcInbox:    make(chan *discordgo.Message),
-		cache:      NewCache(),
-		dc:         dc,
-		registry:   registry,
-		AdminState: Ready,
-		Block:      make(chan interface{}, 1),
+		guildID:      guildID,
+		fbInbox:      make(chan *Message),
+		fbOutbox:     make(chan *Message),
+		dcInbox:      make(chan *discordgo.Message),
+		cache:        NewCache(),
+		dc:           dc,
+		registry:     registry,
+		AdminState:   Ready,
+		block:        make(chan interface{}, 1),
+		results:      make(chan interface{}),
+		AdminHandler: &r,
 	}
 	return ps
 }
