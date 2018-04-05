@@ -205,7 +205,7 @@ func (T *ProxySession) consumeDcInbox() {
 
 func (T *ProxySession) handleDiscordMessage(m *discordgo.Message) {
 	if m.ChannelID == T.adminChannelID {
-		(*T.AdminHandler)(m)
+		(*T.AdminHandler)(T, m)
 	} else {
 		T.forwardFbMessage(m)
 	}
