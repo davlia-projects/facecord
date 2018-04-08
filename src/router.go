@@ -19,7 +19,7 @@ func (T *ProxyBot) runDiscordBot() error {
 }
 
 func (T *ProxyBot) guildCreate(s *discordgo.Session, e *discordgo.GuildCreate) {
-	log.Printf("Creating new session\n")
+	logger.Info(NoTag, "Creating new session")
 	session := NewProxySession(e.Guild.ID, s, T.registry)
 	go session.Run()
 }
