@@ -17,7 +17,7 @@ func (T *ProxySession) runFacebookClient() {
 			if msg, ok := evt.(fbmsgr.MessageEvent); ok {
 				T.handleInboundMessage(msg)
 			} else {
-				logger.Error(NoTag, "unhandled event %+v\n", evt)
+				logger.Info(Unhandled, "unhandled event %+v\n", evt)
 			}
 		}
 	}
@@ -27,7 +27,7 @@ func (T *ProxySession) handleInboundMessage(msg fbmsgr.MessageEvent) {
 	if msg.SenderFBID == T.fb.FBID() {
 		return
 	}
-	logger.Error(NoTag, "received message: %+v\n", msg)
+	logger.Info(Received, "received message: %+v\n", msg)
 	T.fbInbox <- NewMessage(msg.SenderFBID, msg.OtherUser, msg.Body, msg.GroupThread)
 
 }
