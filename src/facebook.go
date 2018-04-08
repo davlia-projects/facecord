@@ -1,9 +1,8 @@
 package main
 
 import (
-	"log"
-
 	"github.com/davlia/fbmsgr"
+	"github.com/facecord/src/logger"
 )
 
 func (T *ProxySession) runFacebookClient() {
@@ -18,7 +17,7 @@ func (T *ProxySession) runFacebookClient() {
 			if msg, ok := evt.(fbmsgr.MessageEvent); ok {
 				T.handleInboundMessage(msg)
 			} else {
-				log.Printf("unhandled event %+v\n", evt)
+				logger.Info(Unhandled, "unhandled event %+v\n", evt)
 			}
 		}
 	}
@@ -28,7 +27,7 @@ func (T *ProxySession) handleInboundMessage(msg fbmsgr.MessageEvent) {
 	if msg.SenderFBID == T.fb.FBID() {
 		return
 	}
-	log.Printf("received message: %+v\n", msg)
+	logger.Info(Received, "received message: %+v\n", msg)
 	T.fbInbox <- NewMessage(msg.SenderFBID, msg.OtherUser, msg.Body, msg.GroupThread)
 
 }
@@ -49,7 +48,7 @@ func (T *ProxySession) handleOutboundMessage() {
 func (T *ProxySession) fetchThread(threadID string) *fbmsgr.ThreadInfo {
 	thread, err := T.fb.Thread(threadID)
 	if err != nil {
-		log.Printf("could not find thread: %+v\n", err)
+		logger.Error(NoTag, "could not find thread: %+v\n", err)
 		return nil
 	}
 	return thread
@@ -59,7 +58,7 @@ func (T *ProxySession) fetchThreads(numThreads int) []*fbmsgr.ThreadInfo {
 	threads := []*fbmsgr.ThreadInfo{}
 	result, err := T.fb.Threads(numThreads)
 	if err != nil {
-		log.Printf("%+v\n", err)
+		logger.Error(NoTag, "could not fetch threads: %+v\n", err)
 	}
 	threads = append(threads, result.Threads...)
 	return threads
@@ -68,7 +67,7 @@ func (T *ProxySession) fetchThreads(numThreads int) []*fbmsgr.ThreadInfo {
 func (T *ProxySession) fetchFriend(fbid string) *fbmsgr.FriendInfo {
 	friend, err := T.fb.Friend(fbid)
 	if err != nil {
-		log.Printf("could not find friend: %+v\n", err)
+		logger.Error(NoTag, "could not find friend: %+v\n", err)
 		return nil
 	}
 	return friend
@@ -77,7 +76,7 @@ func (T *ProxySession) fetchFriend(fbid string) *fbmsgr.FriendInfo {
 func (T *ProxySession) fetchFriends() map[string]*fbmsgr.FriendInfo {
 	friends, err := T.fb.Friends()
 	if err != nil {
-		log.Printf("%+v\n", err)
+		logger.Error(NoTag, "could not fetch friends: %+v\n", err)
 	}
 	return friends
 }

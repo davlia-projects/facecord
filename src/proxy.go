@@ -2,12 +2,12 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/facecord/src/logger"
 )
 
 type ProxyBot struct {
@@ -36,7 +36,7 @@ func (T *ProxyBot) Run() error {
 	go T.runDiscordBot()
 
 	// Wait here until CTRL-C or other term signal is received.
-	fmt.Println("Bot is now running.  Press CTRL-C to exit.")
+	logger.Info(NoTag, "Bot is now running.  Press CTRL-C to exit.")
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	<-sc
@@ -46,7 +46,7 @@ func (T *ProxyBot) Run() error {
 func (T *ProxyBot) Stop() error {
 	err := T.dc.Close()
 	if err != nil {
-		log.Printf("could not close discord session")
+		logger.Error(NoTag, "could not close discord session")
 		return err
 	}
 

@@ -7,6 +7,9 @@ const (
 
 // String values
 const (
+	NoTag            = ""
+	Unhandled        = "Unhandled"
+	Received         = "Message Received"
 	AdminChannelName = "admin"
 	LoginText        = "Please login to continue"
 	UsernameText     = "Enter your username:"
