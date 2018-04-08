@@ -159,6 +159,8 @@ func (T *ProxySession) handleAdminMessage(m *discordgo.Message) {
 	msg := m.Content
 	toks := strings.Split(msg, " ")
 	switch args := toks[1:]; toks[0] {
+	case "!help":
+		T.cmdHelp()
 	case "!login":
 		T.dc.ChannelMessageDelete(T.adminChannelID, m.ID)
 		T.cmdAuthenticate(args)
@@ -168,8 +170,6 @@ func (T *ProxySession) handleAdminMessage(m *discordgo.Message) {
 		T.cmdClose(args)
 	case "!close-all":
 		T.cmdCloseAll()
-	case "!help":
-		T.cmdHelp()
 	}
 }
 

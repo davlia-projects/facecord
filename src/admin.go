@@ -53,17 +53,17 @@ func (T *ProxySession) cmdHelp() {
 }
 
 func (T *ProxySession) cmdAuthenticate(args []string) {
+	var err error
 	if len(args) != 2 {
 		return
 	}
-	fb, err := fbmsgr.Auth(args[0], args[1])
+	T.fb, err = fbmsgr.Auth(args[0], args[1])
 	if err != nil {
 		logger.Error(NoTag, "error authenticating")
 		T.adminPrintf(LoginFailedText)
 		return
 	}
 	T.adminPrintf(LoginSuccessText)
-	T.fb = fb
 	T.updateFriends()
 	entries := T.updateThreads(NumThreads)
 	T.renderEntries(entries)
