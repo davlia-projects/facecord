@@ -2,12 +2,12 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/facecord/src/logger"
 )
 
 type ProxyBot struct {
@@ -46,7 +46,7 @@ func (T *ProxyBot) Run() error {
 func (T *ProxyBot) Stop() error {
 	err := T.dc.Close()
 	if err != nil {
-		log.Printf("could not close discord session")
+		logger.Error(NoTag, "could not close discord session")
 		return err
 	}
 
