@@ -1,10 +1,10 @@
 package main
 
 import (
-	"log"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/facecord/src/logger"
 
 	"github.com/davlia/fbmsgr"
 )
@@ -48,7 +48,7 @@ func (T *ProxySession) registerChannel(channel *discordgo.Channel) {
 func (T *ProxySession) purgeChannels() {
 	channels, err := T.dc.GuildChannels(T.guildID)
 	if err != nil {
-		log.Printf("error: %s\n", err)
+		logger.Error(NoTag, "could not purge channels: %s\n", err)
 		return
 	}
 	for _, ch := range channels {
@@ -60,7 +60,7 @@ func (T *ProxySession) createAdminChannel() {
 	channel, err := T.dc.GuildChannelCreate(T.guildID, AdminChannelName, "text")
 	T.registerChannel(channel)
 	if err != nil {
-		log.Printf("could not create admin channel: %s\n", err)
+		logger.Error(NoTag, "could not create admin channel: %s\n", err)
 	}
 	T.adminChannelID = channel.ID
 	T.dc.ChannelMessageSend(T.adminChannelID, LoginText)
@@ -69,7 +69,7 @@ func (T *ProxySession) createAdminChannel() {
 func (T *ProxySession) authenticate(username, password string) {
 	fb, err := fbmsgr.Auth(username, password)
 	if err != nil {
-		log.Printf("error authenticating")
+		logger.Error(NoTag, "error authenticating")
 		T.dc.ChannelMessageSend(T.adminChannelID, LoginFailedText)
 		return
 	}
@@ -88,7 +88,7 @@ func (T *ProxySession) renderEntries(entries []*Entry) {
 		if entry.ChannelID == "" && entry.Name != "" {
 			channelID, err := T.createChannel(entry.Name)
 			if err != nil {
-				log.Printf("error creating channel: %s\n", err)
+				logger.Error(NoTag, "error creating channel: %s\n", err)
 				continue
 			}
 			entry.ChannelID = channelID
@@ -144,7 +144,7 @@ func (T *ProxySession) handleGroupMessage(msg *Message) {
 		}
 		entry.ChannelID, err = T.createChannel(entry.Name)
 		if err != nil {
-			log.Printf("error while handling fbInbox message: %s\n", err)
+			logger.Error(NoTag, "error while handling facebook inbox message: %s\n", err)
 			return
 		}
 		T.cache.upsertEntry(entry)
@@ -174,7 +174,7 @@ func (T *ProxySession) handleDirectMessage(msg *Message) {
 		}
 		entry.ChannelID, err = T.createChannel(entry.Name)
 		if err != nil {
-			log.Printf("error while handling fbInbox message: %s\n", err)
+			logger.Error(NoTag, "error while handling facebook inbox message: %s\n", err)
 			return
 		}
 		T.cache.upsertEntry(entry)
@@ -216,7 +216,7 @@ func (T *ProxySession) forwardFbMessage(m *discordgo.Message) {
 
 	entry, err := T.cache.getByChannelID(m.ChannelID)
 	if err != nil {
-		log.Printf("error while forwarding messages: %s. entry: %s\n", err, entry)
+		logger.Error(NoTag, "error while forwarding messages: %s. entry: %s\n", err, entry)
 		return
 	}
 

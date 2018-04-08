@@ -1,11 +1,20 @@
 package main
 
-import "log"
+import (
+	"os"
+
+	"github.com/facecord/src/logger"
+)
 
 func main() {
+	if os.Getenv("environment") == "production" {
+		logger.SetLevel(logger.InfoLevel)
+	} else {
+		logger.SetLevel(logger.DebugLevel)
+	}
 	proxy, err := NewProxyBot()
 	if err != nil {
-		log.Printf("could not start proxy")
+		logger.Error(NoTag, "could not start proxy")
 	}
 	proxy.Run()
 }
