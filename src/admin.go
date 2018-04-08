@@ -2,6 +2,10 @@ package main
 
 import (
 	"fmt"
+	"strings"
+
+	"github.com/agext/levenshtein"
+	"github.com/bwmarrin/discordgo"
 
 	"github.com/davlia/fbmsgr"
 	"github.com/facecord/src/logger"
@@ -72,11 +76,55 @@ func (T *ProxySession) cmdAuthenticate(args []string) {
 }
 
 func (T *ProxySession) cmdOpen(args []string) {
-	// TODO: Implement
+	var (
+		mostSimilar  *Entry
+		highestScore float64
+	)
+	name := NormalizeStr(strings.Join(args, " "))
+	p := levenshtein.NewParams()
+	for entry := range T.cache.Entries {
+		score := levenshtein.Similarity(name, NormalizeStr(entry.Name), p)
+		if score > highestScore {
+			highestScore = score
+			mostSimilar = entry
+		}
+	}
+	if mostSimilar.ChannelID == "" {
+		channelID, err := T.createChannel(mostSimilar.Name)
+		if err != nil {
+			logger.Error(NoTag, "error handling cmdOpen: %+v\n", err)
+			return
+		}
+		mostSimilar.ChannelID = channelID
+	}
 }
 
 func (T *ProxySession) cmdClose(args []string) {
-	// TODO: Implement
+	var (
+		mostSimilar  *discordgo.Channel
+		highestScore float64
+	)
+	name := FmtDiscordChannelName(strings.Join(args, " "))
+	p := levenshtein.NewParams()
+	channels, err := T.dc.GuildChannels(T.guildID)
+	if err != nil {
+		logger.Error(NoTag, "error grabbing list of channels: %+v\n", err)
+		return
+	}
+	for _, ch := range channels {
+		score := levenshtein.Similarity(name, ch.Name, p)
+		if score > highestScore {
+			highestScore = score
+			mostSimilar = ch
+		}
+	}
+	_, err = T.dc.ChannelDelete(mostSimilar.ID)
+	if err != nil {
+		logger.Error(NoTag, "could not delete channel: %+v\n", err)
+	}
+	T.unregisterChannel(mostSimilar)
+	entry, _ := T.cache.getByChannelID(mostSimilar.ID)
+	entry.ChannelID = ""
 }
 
 func (T *ProxySession) cmdCloseAll() {

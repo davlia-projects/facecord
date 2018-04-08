@@ -2,7 +2,7 @@ package main
 
 // Numeric values
 const (
-	NumThreads = 32
+	NumThreads = 5
 )
 
 // String values

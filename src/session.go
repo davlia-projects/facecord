@@ -44,6 +44,10 @@ func (T *ProxySession) registerChannel(channel *discordgo.Channel) {
 	T.registry.Register(channel.ID, &T.dcInbox)
 }
 
+func (T *ProxySession) unregisterChannel(channel *discordgo.Channel) {
+	T.registry.Unregister(channel.ID)
+}
+
 func (T *ProxySession) renderEntries(entries []*Entry) {
 	for _, entry := range entries {
 		if entry.ChannelID == "" && entry.Name != "" {
