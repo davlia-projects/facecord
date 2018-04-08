@@ -29,7 +29,6 @@ func (T *ProxySession) handleInboundMessage(msg fbmsgr.MessageEvent) {
 	}
 	logger.Info(Received, "received message: %+v\n", msg)
 	T.fbInbox <- NewMessage(msg.SenderFBID, msg.OtherUser, msg.Body, msg.GroupThread)
-
 }
 
 func (T *ProxySession) handleOutboundMessage() {
