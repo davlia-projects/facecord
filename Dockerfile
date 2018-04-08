@@ -12,8 +12,8 @@ ADD . /go/src/github.com/facecord
 # Build the outyet command inside the container.
 # (You may fetch or manage dependencies here,
 # either manually or with a tool like "godep".)
-RUN go install github.com/davlia/fbmsgr
-RUN go install github.com/bwmarrin/discordgo
+RUN go get github.com/davlia/fbmsgr
+RUN go get github.com/bwmarrin/discordgo
 
 # Run the outyet command by default when the container starts.
 ENTRYPOINT /go/bin/facecord

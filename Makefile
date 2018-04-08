@@ -2,4 +2,4 @@ run:
 	go run src/*
 
 build:
-	docker build --build-arg BOT_TOKEN=$BOT_TOKEN -t facecord --name facecord Dockerfile
+	sudo docker build --build-arg bot_token=${BOT_TOKEN} -t facecord .
