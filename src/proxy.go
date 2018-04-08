@@ -18,7 +18,13 @@ type ProxyBot struct {
 }
 
 func NewProxyBot() (*ProxyBot, error) {
-	dg, err := discordgo.New("Bot " + os.Getenv("BOT_TOKEN"))
+	var token string
+	if os.Getenv("ENVIRONMENT") == "production" {
+		token = os.Getenv("BOT_TOKEN")
+	} else {
+		token = os.Getenv("BOT_TOKEN_DEV")
+	}
+	dg, err := discordgo.New(fmt.Sprintf("Bot %s", token))
 	if err != nil {
 		panic(fmt.Sprintf("error creating Discord session,", err))
 	}

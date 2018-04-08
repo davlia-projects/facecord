@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	if os.Getenv("environment") == "production" {
+	if os.Getenv("ENVIRONMENT") == "production" {
 		logger.SetLevel(logger.InfoLevel)
 	} else {
 		logger.SetLevel(logger.DebugLevel)
