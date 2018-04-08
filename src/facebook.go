@@ -7,9 +7,6 @@ import (
 
 func (T *ProxySession) runFacebookClient() {
 	stream := T.fb.EventStream()
-
-	go T.handleOutboundMessage()
-
 	defer stream.Close()
 	for {
 		select {

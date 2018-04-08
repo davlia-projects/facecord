@@ -24,8 +24,6 @@ type ProxySession struct {
 func NewProxySession(guildID string, dc *discordgo.Session, registry *Registry) *ProxySession {
 	ps := &ProxySession{
 		guildID:  guildID,
-		fbInbox:  make(chan *Message),
-		fbOutbox: make(chan *Message),
 		dcInbox:  make(chan *discordgo.Message),
 		cache:    NewCache(),
 		dc:       dc,
@@ -60,6 +58,17 @@ func (T *ProxySession) renderEntries(entries []*Entry) {
 			T.cache.upsertEntry(entry)
 		}
 	}
+}
+
+func (T *ProxySession) deleteChannel(channelID string) {
+	ch, err := T.dc.ChannelDelete(channelID)
+	if err != nil {
+		logger.Error(NoTag, "could not delete channel: %+v\n", err)
+		return
+	}
+	T.unregisterChannel(ch)
+	entry, _ := T.cache.getByChannelID(ch.ID)
+	entry.ChannelID = ""
 }
 
 /**
@@ -167,7 +176,9 @@ func (T *ProxySession) handleAdminMessage(m *discordgo.Message) {
 		T.cmdHelp()
 	case "!login":
 		T.dc.ChannelMessageDelete(T.adminChannelID, m.ID)
-		T.cmdAuthenticate(args)
+		T.cmdLogin(args)
+	case "!logout":
+		T.cmdLogout()
 	case "!open":
 		T.cmdOpen(args)
 	case "!close":

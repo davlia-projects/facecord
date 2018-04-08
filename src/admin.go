@@ -43,7 +43,7 @@ func (T *ProxySession) purgeChannels() {
 	}
 	for _, ch := range channels {
 		if ch.ID != T.adminChannelID {
-			T.dc.ChannelDelete(ch.ID)
+			T.deleteChannel(ch.ID)
 		}
 	}
 }
@@ -56,9 +56,9 @@ func (T *ProxySession) cmdHelp() {
 	T.adminPrintf(HelpText)
 }
 
-func (T *ProxySession) cmdAuthenticate(args []string) {
+func (T *ProxySession) cmdLogin(args []string) {
 	var err error
-	if len(args) != 2 {
+	if len(args) != 2 || T.fb != nil {
 		return
 	}
 	T.fb, err = fbmsgr.Auth(args[0], args[1])
@@ -71,8 +71,19 @@ func (T *ProxySession) cmdAuthenticate(args []string) {
 	T.updateFriends()
 	entries := T.updateThreads(NumThreads)
 	T.renderEntries(entries)
+	T.fbInbox = make(chan *Message)
+	T.fbOutbox = make(chan *Message)
 	go T.runFacebookClient()
 	go T.consumeFbInbox()
+	go T.handleOutboundMessage()
+}
+
+func (T *ProxySession) cmdLogout() {
+	T.fb.Close()
+	close(T.fbInbox)
+	close(T.fbOutbox)
+	T.purgeChannels()
+	T.fb = nil
 }
 
 func (T *ProxySession) cmdOpen(args []string) {
@@ -118,13 +129,7 @@ func (T *ProxySession) cmdClose(args []string) {
 			mostSimilar = ch
 		}
 	}
-	_, err = T.dc.ChannelDelete(mostSimilar.ID)
-	if err != nil {
-		logger.Error(NoTag, "could not delete channel: %+v\n", err)
-	}
-	T.unregisterChannel(mostSimilar)
-	entry, _ := T.cache.getByChannelID(mostSimilar.ID)
-	entry.ChannelID = ""
+	T.deleteChannel(mostSimilar.ID)
 }
 
 func (T *ProxySession) cmdCloseAll() {
