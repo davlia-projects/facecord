@@ -1,9 +1,8 @@
 package main
 
 import (
-	"log"
-
 	"github.com/bwmarrin/discordgo"
+	"github.com/facecord/src/logger"
 )
 
 func (T *ProxyBot) runDiscordBot() error {
@@ -12,7 +11,7 @@ func (T *ProxyBot) runDiscordBot() error {
 
 	err := T.dc.Open()
 	if err != nil {
-		log.Printf("error: %s\n", err)
+		logger.Error(NoTag, "could not create discord bot session: %s\n", err)
 		return err
 	}
 

@@ -7,6 +7,7 @@ const (
 
 // String values
 const (
+	NoTag            = ""
 	AdminChannelName = "admin"
 	LoginText        = "Type \"!login <username> <password>\""
 	LoginSuccessText = "Login successful!"

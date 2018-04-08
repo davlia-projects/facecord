@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"fmt"
 	"log"
 )
 
@@ -22,8 +23,24 @@ func SetLevel(level Level) {
 	l.level = level
 }
 
-func Info(fmt string, args ...interface{}) {
-	if l.level < InfoLevel {
-		log.Printf(fmt, args...)
+func printf(level Level, tag, msg string, args ...interface{}) {
+	if l.level < level {
+		tagFmt := msg
+		if tag != "" {
+			tagFmt = fmt.Sprintf("%s: %s\n", tag, msg)
+		}
+		log.Printf(tagFmt, args)
 	}
+}
+
+func Info(tag, msg string, args ...interface{}) {
+	printf(InfoLevel, tag, msg, args)
+}
+
+func Debug(tag, msg string, args ...interface{}) {
+	printf(DebugLevel, tag, msg, args)
+}
+
+func Error(tag, msg string, args ...interface{}) {
+	printf(ErrorLevel, tag, msg, args)
 }
