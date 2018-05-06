@@ -24,8 +24,6 @@ type ProxySession struct {
 func NewProxySession(guildID string, dc *discordgo.Session, registry *Registry) *ProxySession {
 	ps := &ProxySession{
 		guildID:  guildID,
-		fbInbox:  make(chan *Message),
-		fbOutbox: make(chan *Message),
 		dcInbox:  make(chan *discordgo.Message),
 		cache:    NewCache(),
 		dc:       dc,
@@ -38,49 +36,14 @@ func (T *ProxySession) Run() {
 	T.purgeChannels()
 	T.createAdminChannel()
 	go T.consumeDcInbox()
-
 }
 
 func (T *ProxySession) registerChannel(channel *discordgo.Channel) {
 	T.registry.Register(channel.ID, &T.dcInbox)
 }
 
-func (T *ProxySession) purgeChannels() {
-	channels, err := T.dc.GuildChannels(T.guildID)
-	if err != nil {
-		logger.Error(NoTag, "could not purge channels: %s\n", err)
-		return
-	}
-	for _, ch := range channels {
-		T.dc.ChannelDelete(ch.ID)
-	}
-}
-
-func (T *ProxySession) createAdminChannel() {
-	channel, err := T.dc.GuildChannelCreate(T.guildID, AdminChannelName, "text")
-	T.registerChannel(channel)
-	if err != nil {
-		logger.Error(NoTag, "could not create admin channel: %s\n", err)
-	}
-	T.adminChannelID = channel.ID
-	T.dc.ChannelMessageSend(T.adminChannelID, LoginText)
-}
-
-func (T *ProxySession) authenticate(username, password string) {
-	fb, err := fbmsgr.Auth(username, password)
-	if err != nil {
-		logger.Error(NoTag, "error authenticating")
-		T.dc.ChannelMessageSend(T.adminChannelID, LoginFailedText)
-		return
-	}
-	T.dc.ChannelMessageSend(T.adminChannelID, LoginSuccessText)
-	T.fb = fb
-	T.updateFriends()
-	entries := T.updateThreads(NumThreads)
-	T.renderEntries(entries)
-	go T.runFacebookClient()
-	go T.consumeFbInbox()
-
+func (T *ProxySession) unregisterChannel(channel *discordgo.Channel) {
+	T.registry.Unregister(channel.ID)
 }
 
 func (T *ProxySession) renderEntries(entries []*Entry) {
@@ -97,13 +60,15 @@ func (T *ProxySession) renderEntries(entries []*Entry) {
 	}
 }
 
-func (T *ProxySession) createChannel(name string) (string, error) {
-	channel, err := T.dc.GuildChannelCreate(T.guildID, name, "text")
+func (T *ProxySession) deleteChannel(channelID string) {
+	ch, err := T.dc.ChannelDelete(channelID)
 	if err != nil {
-		return "", err
+		logger.Error(NoTag, "could not delete channel: %+v\n", err)
+		return
 	}
-	T.registerChannel(channel)
-	return channel.ID, nil
+	T.unregisterChannel(ch)
+	entry, _ := T.cache.getByChannelID(ch.ID)
+	entry.ChannelID = ""
 }
 
 /**
@@ -206,8 +171,20 @@ func (T *ProxySession) handleDiscordMessage(m *discordgo.Message) {
 func (T *ProxySession) handleAdminMessage(m *discordgo.Message) {
 	msg := m.Content
 	toks := strings.Split(msg, " ")
-	if toks[0] == "!login" && len(toks) == 3 {
-		T.authenticate(toks[1], toks[2])
+	switch args := toks[1:]; toks[0] {
+	case "!help":
+		T.cmdHelp()
+	case "!login":
+		T.dc.ChannelMessageDelete(T.adminChannelID, m.ID)
+		T.cmdLogin(args)
+	case "!logout":
+		T.cmdLogout()
+	case "!open":
+		T.cmdOpen(args)
+	case "!close":
+		T.cmdClose(args)
+	case "!close-all":
+		T.cmdCloseAll()
 	}
 }
 

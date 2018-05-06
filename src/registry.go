@@ -27,3 +27,7 @@ func (T *Registry) Lookup(channelID string) (*chan *discordgo.Message, error) {
 	}
 	return nil, errors.New("channel could not be found in registry")
 }
+
+func (T *Registry) Unregister(channelID string) {
+	delete(T.registry, channelID)
+}

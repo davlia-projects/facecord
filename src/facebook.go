@@ -7,9 +7,6 @@ import (
 
 func (T *ProxySession) runFacebookClient() {
 	stream := T.fb.EventStream()
-
-	go T.handleOutboundMessage()
-
 	defer stream.Close()
 	for {
 		select {
@@ -29,7 +26,6 @@ func (T *ProxySession) handleInboundMessage(msg fbmsgr.MessageEvent) {
 	}
 	logger.Info(Received, "received message: %+v\n", msg)
 	T.fbInbox <- NewMessage(msg.SenderFBID, msg.OtherUser, msg.Body, msg.GroupThread)
-
 }
 
 func (T *ProxySession) handleOutboundMessage() {
