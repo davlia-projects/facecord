@@ -1,6 +1,7 @@
 package main
 
 import (
+	"math"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
@@ -12,6 +13,8 @@ import (
 type ProxySession struct {
 	guildID        string
 	adminChannelID string
+	dmCategoryID   string
+	firstPosition  int
 	fbInbox        chan *Message
 	fbOutbox       chan *Message
 	dcInbox        chan *discordgo.Message
@@ -23,11 +26,12 @@ type ProxySession struct {
 
 func NewProxySession(guildID string, dc *discordgo.Session, registry *Registry) *ProxySession {
 	ps := &ProxySession{
-		guildID:  guildID,
-		dcInbox:  make(chan *discordgo.Message),
-		cache:    NewCache(),
-		dc:       dc,
-		registry: registry,
+		guildID:       guildID,
+		firstPosition: math.MaxInt32 - 1,
+		dcInbox:       make(chan *discordgo.Message),
+		cache:         NewCache(),
+		dc:            dc,
+		registry:      registry,
 	}
 	return ps
 }
@@ -49,7 +53,7 @@ func (T *ProxySession) unregisterChannel(channel *discordgo.Channel) {
 func (T *ProxySession) renderEntries(entries []*Entry) {
 	for _, entry := range entries {
 		if entry.ChannelID == "" && entry.Name != "" {
-			channelID, err := T.createChannel(entry.Name)
+			channelID, err := T.createConversation(entry.Name)
 			if err != nil {
 				logger.Error(NoTag, "error creating channel: %s\n", err)
 				continue
@@ -58,17 +62,6 @@ func (T *ProxySession) renderEntries(entries []*Entry) {
 			T.cache.upsertEntry(entry)
 		}
 	}
-}
-
-func (T *ProxySession) deleteChannel(channelID string) {
-	ch, err := T.dc.ChannelDelete(channelID)
-	if err != nil {
-		logger.Error(NoTag, "could not delete channel: %+v\n", err)
-		return
-	}
-	T.unregisterChannel(ch)
-	entry, _ := T.cache.getByChannelID(ch.ID)
-	entry.ChannelID = ""
 }
 
 /**
@@ -107,7 +100,7 @@ func (T *ProxySession) handleGroupMessage(msg *Message) {
 		} else {
 			entry.Name = fbid
 		}
-		entry.ChannelID, err = T.createChannel(entry.Name)
+		entry.ChannelID, err = T.createConversation(entry.Name)
 		if err != nil {
 			logger.Error(NoTag, "error while handling facebook inbox message: %s\n", err)
 			return
@@ -124,6 +117,7 @@ func (T *ProxySession) handleGroupMessage(msg *Message) {
 		senderName = sender.Name
 	}
 	embed := CreateMessageEmbed(senderName, msg.Body)
+	T.moveChannelToTop(entry.ChannelID)
 	T.dc.ChannelMessageSendEmbed(entry.ChannelID, embed)
 }
 
@@ -137,7 +131,7 @@ func (T *ProxySession) handleDirectMessage(msg *Message) {
 			Name: friend.Vanity,
 			FBID: fbid,
 		}
-		entry.ChannelID, err = T.createChannel(entry.Name)
+		entry.ChannelID, err = T.createConversation(entry.Name)
 		if err != nil {
 			logger.Error(NoTag, "error while handling facebook inbox message: %s\n", err)
 			return
@@ -145,7 +139,22 @@ func (T *ProxySession) handleDirectMessage(msg *Message) {
 		T.cache.upsertEntry(entry)
 	}
 	embed := CreateMessageEmbed(entry.Name, msg.Body)
+	T.moveChannelToTop(entry.ChannelID)
 	T.dc.ChannelMessageSendEmbed(entry.ChannelID, embed)
+}
+
+func (T *ProxySession) moveChannelToTop(channelID string) {
+	ch, err := T.dc.Channel(channelID)
+	if err != nil {
+		logger.Error(NoTag, "error while retrieving channel %s: %s\n", channelID, err)
+		return
+	}
+	if ch.Position != T.firstPosition {
+		T.dc.ChannelEditComplex(channelID, &discordgo.ChannelEdit{
+			Position: T.firstPosition,
+		})
+		T.firstPosition--
+	}
 }
 
 /**
@@ -209,5 +218,6 @@ func (T *ProxySession) forwardFbMessage(m *discordgo.Message) {
 		}
 	}
 
+	T.moveChannelToTop(m.ChannelID)
 	T.fbOutbox <- msg
 }
