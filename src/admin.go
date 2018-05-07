@@ -17,22 +17,57 @@ func (T *ProxySession) adminPrintf(msg string, args ...interface{}) {
 }
 
 func (T *ProxySession) createAdminChannel() {
+	category, err := T.dc.GuildChannelCreate(T.guildID, AdminChannelName, "4")
+	if err != nil {
+		logger.Error(NoTag, "could not create category channel: %s\n", err)
+		return
+	}
 	channel, err := T.dc.GuildChannelCreate(T.guildID, AdminChannelName, "text")
-	T.registerChannel(channel)
+	T.dc.ChannelEditComplex(channel.ID, &discordgo.ChannelEdit{
+		ParentID: category.ID,
+	})
 	if err != nil {
 		logger.Error(NoTag, "could not create admin channel: %s\n", err)
+		return
 	}
+	T.registerChannel(channel)
 	T.adminChannelID = channel.ID
 	T.adminPrintf(LoginText)
 }
 
-func (T *ProxySession) createChannel(name string) (string, error) {
+func (T *ProxySession) createConversation(name string) (string, error) {
+	if T.dmCategoryID == "" {
+		category, err := T.dc.GuildChannelCreate(T.guildID, "OPEN CONVERSATIONS", "4")
+		if err != nil {
+			logger.Error(NoTag, "could not create category channel: %s\n", err)
+		}
+		T.dmCategoryID = category.ID
+	}
 	channel, err := T.dc.GuildChannelCreate(T.guildID, name, "text")
 	if err != nil {
+		logger.Error(NoTag, "could not create channel %s: %s\n", name, err)
 		return "", err
 	}
+	_, err = T.dc.ChannelEditComplex(channel.ID, &discordgo.ChannelEdit{
+		ParentID: T.dmCategoryID,
+		Position: T.firstPosition,
+	})
+	if err != nil {
+		logger.Error(NoTag, "could not edit channel %s: %s\n", name, err)
+		return "", err
+	}
+	T.firstPosition--
 	T.registerChannel(channel)
 	return channel.ID, nil
+}
+
+func (T *ProxySession) deleteChannel(channelID string) {
+	ch, err := T.dc.ChannelDelete(channelID)
+	if err != nil {
+		logger.Error(NoTag, "could not delete channel: %+v\n", err)
+		return
+	}
+	T.unregisterChannel(ch)
 }
 
 func (T *ProxySession) purgeChannels() {
@@ -101,7 +136,7 @@ func (T *ProxySession) cmdOpen(args []string) {
 		}
 	}
 	if mostSimilar.ChannelID == "" {
-		channelID, err := T.createChannel(mostSimilar.Name)
+		channelID, err := T.createConversation(mostSimilar.Name)
 		if err != nil {
 			logger.Error(NoTag, "error handling cmdOpen: %+v\n", err)
 			return
